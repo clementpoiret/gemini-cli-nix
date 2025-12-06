@@ -28,9 +28,20 @@ jobs:
           experimental-features = nix-command flakes
           access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
 
+    - uses: cachix/cachix-action@v15
+      if: github.ref == 'refs/heads/main'
+      with:
+        name: gemini-cli
+        authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+
     - name: Build gemini-cli
       run: |
         nix build .#gemini-cli
+
+    - name: Push gemini-cli to Cachix
+      if: github.ref == 'refs/heads/main'
+      run: |
+        nix build .#gemini-cli --json | jq -r '.[].outputs.out' | cachix push gemini-cli
 
     - name: Test gemini-cli
       run: |
@@ -39,6 +50,11 @@ jobs:
     - name: Build gemini-cli-preview
       run: |
         nix build .#gemini-cli-preview
+
+    - name: Push gemini-cli-preview to Cachix
+      if: github.ref == 'refs/heads/main'
+      run: |
+        nix build .#gemini-cli-preview --json | jq -r '.[].outputs.out' | cachix push gemini-cli
 
     - name: Test gemini-cli-preview
       run: |
