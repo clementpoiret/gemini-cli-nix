@@ -41,7 +41,7 @@ jobs:
     - name: Push gemini-cli to Cachix
       if: github.ref == 'refs/heads/main'
       run: |
-        nix build .#gemini-cli --json | jq -r '.[].outputs.out' | cachix push gemini-cli
+        nix build .#gemini-cli --json | jq -r '.[].outputs.out' | cachix push clementpoiret
 
     - name: Test gemini-cli
       run: |
@@ -54,7 +54,7 @@ jobs:
     - name: Push gemini-cli-preview to Cachix
       if: github.ref == 'refs/heads/main'
       run: |
-        nix build .#gemini-cli-preview --json | jq -r '.[].outputs.out' | cachix push gemini-cli
+        nix build .#gemini-cli-preview --json | jq -r '.[].outputs.out' | cachix push clementpoiret
 
     - name: Test gemini-cli-preview
       run: |
