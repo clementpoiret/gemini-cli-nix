@@ -16,17 +16,16 @@ buildNpmPackage (finalAttrs: {
     owner = "google-gemini";
     repo = "gemini-cli";
     rev = "v${finalAttrs.version}";
-    hash = "sha256-kAb5CSD7PB3b63QnVSbgWxIMPO2Hh5LfmtZ3wE2TUFk=";
+    hash = "sha256-xmFU5itxGyhcLDAT3kOPrSR4U1TU6m/l4X7NBL0o7+U=";
   };
 
-  npmDepsHash = "sha256-tCu98oLr/xh4MJR6q+AbySHOmFeZFH7z59rL0K5A9Es=";
+  npmDepsHash = "sha256-+WoqXoI3KgGBCAfqVZ0tF4jG/ew/i3rhq4c8wd146Nw=";
 
-  nativeBuildInputs =
-    [
-      jq
-      pkg-config
-    ]
-    ++ lib.optionals stdenv.isDarwin [clang_20]; # clang_21 breaks @vscode/vsce's optionalDependencies keytar
+  nativeBuildInputs = [
+    jq
+    pkg-config
+  ]
+  ++ lib.optionals stdenv.isDarwin [ clang_20 ]; # clang_21 breaks @vscode/vsce's optionalDependencies keytar
 
   buildInputs = [
     libsecret
@@ -38,9 +37,11 @@ buildNpmPackage (finalAttrs: {
   '';
 
   postPatch = ''
-    # Disable auto-update
+    # Disable auto-update and notifications by forcing the check to fail early.
+    # We patch 'enableAutoUpdateNotification' because it is checked first, and 
+    # being the longer variable name, it avoids substring replacement collisions.
     substituteInPlace packages/cli/src/utils/handleAutoUpdate.ts \
-      --replace-fail "settings.merged.general?.disableAutoUpdate ?? false" "settings.merged.general?.disableAutoUpdate ?? true"
+      --replace-fail "settings.merged.general.enableAutoUpdateNotification" "false"
 
     # Remove node-pty dependency from package.json
     ${jq}/bin/jq 'del(.optionalDependencies."node-pty")' package.json > package.json.tmp && mv package.json.tmp package.json
@@ -64,6 +65,9 @@ buildNpmPackage (finalAttrs: {
     cp -r packages/cli $out/share/gemini-cli/node_modules/@google/gemini-cli
     cp -r packages/core $out/share/gemini-cli/node_modules/@google/gemini-cli-core
     cp -r packages/a2a-server $out/share/gemini-cli/node_modules/@google/gemini-cli-a2a-server
+
+    # Remove the broken symlink that points to the deleted /build directory
+    rm -f $out/share/gemini-cli/node_modules/@google/gemini-cli-core/dist/docs/CONTRIBUTING.md
 
     ln -s $out/share/gemini-cli/node_modules/@google/gemini-cli/dist/index.js $out/bin/gemini-preview
     chmod +x "$out/bin/gemini-preview"

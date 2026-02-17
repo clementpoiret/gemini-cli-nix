@@ -1,25 +1,60 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Update Gemini CLI Preview version in package-preview.nix
+# Configuration
+PACKAGE_FILE="package-preview.nix"
+FLAKE_ATTR="gemini-cli-preview"
+NPM_PACKAGE="@google/gemini-cli"
+FAKE_HASH="sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
 
 echo "Checking for latest Gemini CLI Preview version..."
-# Get the version from the 'preview' dist-tag
-LATEST_VERSION=$(npm view @google/gemini-cli dist-tags.preview)
-CURRENT_VERSION=$(grep 'version =' package-preview.nix | cut -d '"' -f 2)
+# Get version from dist-tags.preview
+LATEST_VERSION=$(npm view "$NPM_PACKAGE" dist-tags.preview)
+CURRENT_VERSION=$(grep 'version =' "$PACKAGE_FILE" | cut -d '"' -f 2)
 
 if [ "$LATEST_VERSION" == "$CURRENT_VERSION" ]; then
   echo "Already at latest preview version: $CURRENT_VERSION"
   exit 0
 fi
 
-echo "Updating from $CURRENT_VERSION to $LATEST_VERSION..."
+echo "Updating $FLAKE_ATTR from $CURRENT_VERSION to $LATEST_VERSION..."
 
-URL="https://registry.npmjs.org/@google/gemini-cli/-/gemini-cli-${LATEST_VERSION}.tgz"
-SHA256=$(nix-prefetch-url $URL)
+# 1. Update the version number
+sed -i "s/version = \".*\"/version = \"$LATEST_VERSION\"/" "$PACKAGE_FILE"
 
-# Update package-preview.nix
-perl -pi -e "s/version = \".*\"/version = \"$LATEST_VERSION\"/" package-preview.nix
-perl -pi -e "s/sha256 = \".*\"/sha256 = \"$SHA256\"/" package-preview.nix
+# 2. Invalidate hashes
+sed -i "s/hash = \".*\"/hash = \"$FAKE_HASH\"/" "$PACKAGE_FILE"
+sed -i "s/npmDepsHash = \".*\"/npmDepsHash = \"$FAKE_HASH\"/" "$PACKAGE_FILE"
 
-echo "Updated package-preview.nix to version $LATEST_VERSION"
+# 3. Fetch the new Source Hash
+echo "Fetching new source hash via Nix build..."
+OUTPUT=$(nix build .#$FLAKE_ATTR 2>&1 || true)
+NEW_SRC_HASH=$(echo "$OUTPUT" | grep "got:" | head -n1 | cut -d ':' -f 2 | xargs)
+
+if [[ -z "$NEW_SRC_HASH" || "$NEW_SRC_HASH" != sha256-* ]]; then
+    echo "❌ Failed to extract source hash. Build output:"
+    echo "$OUTPUT"
+    exit 1
+fi
+
+echo "Found source hash: $NEW_SRC_HASH"
+sed -i "s/hash = \"$FAKE_HASH\"/hash = \"$NEW_SRC_HASH\"/" "$PACKAGE_FILE"
+
+# 4. Fetch the new NPM Deps Hash
+echo "Fetching new npmDepsHash via Nix build..."
+OUTPUT=$(nix build .#$FLAKE_ATTR 2>&1 || true)
+NEW_DEPS_HASH=$(echo "$OUTPUT" | grep "got:" | head -n1 | cut -d ':' -f 2 | xargs)
+
+if [[ -z "$NEW_DEPS_HASH" || "$NEW_DEPS_HASH" != sha256-* ]]; then
+    echo "❌ Failed to extract npm deps hash. Build output:"
+    echo "$OUTPUT"
+    exit 1
+fi
+
+echo "Found npm hash: $NEW_DEPS_HASH"
+sed -i "s/npmDepsHash = \"$FAKE_HASH\"/npmDepsHash = \"$NEW_DEPS_HASH\"/" "$PACKAGE_FILE"
+
+# 5. Final Verification
+echo "Verifying successful build..."
+nix build .#$FLAKE_ATTR
+echo "Updated $PACKAGE_FILE to version $LATEST_VERSION successfully."
