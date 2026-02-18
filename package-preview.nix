@@ -55,18 +55,20 @@ buildNpmPackage (finalAttrs: {
     mkdir -p $out/{bin,share/gemini-cli}
 
     npm prune --omit=dev
-    cp -r node_modules $out/share/gemini-cli/
 
-    rm -f $out/share/gemini-cli/node_modules/@google/gemini-cli
-    rm -f $out/share/gemini-cli/node_modules/@google/gemini-cli-core
-    rm -f $out/share/gemini-cli/node_modules/@google/gemini-cli-a2a-server
-    rm -f $out/share/gemini-cli/node_modules/@google/gemini-cli-sdk
-    rm -f $out/share/gemini-cli/node_modules/@google/gemini-cli-test-utils
-    rm -f $out/share/gemini-cli/node_modules/gemini-cli-vscode-ide-companion
-    cp -r packages/cli $out/share/gemini-cli/node_modules/@google/gemini-cli
-    cp -r packages/core $out/share/gemini-cli/node_modules/@google/gemini-cli-core
-    cp -r packages/a2a-server $out/share/gemini-cli/node_modules/@google/gemini-cli-a2a-server
-    cp -r packages/sdk $out/share/gemini-cli/node_modules/@google/gemini-cli-sdk
+    # Resolve all workspace symlinks to real copies before installing.
+    # This handles any current or future packages/ subdirectory without
+    # needing to hardcode names. maxdepth 2 covers both unscoped
+    # (node_modules/foo) and scoped (node_modules/@scope/foo) packages.
+    find node_modules -maxdepth 2 -type l | while read -r link; do
+      resolved=$(realpath "$link" 2>/dev/null || true)
+      if [[ "$resolved" == "$(pwd)/packages/"* ]] && [[ -d "$resolved" ]]; then
+        rm "$link"
+        cp -r "$resolved" "$link"
+      fi
+    done
+
+    cp -r node_modules $out/share/gemini-cli/
 
     rm -f $out/share/gemini-cli/node_modules/@google/gemini-cli-core/dist/docs/CONTRIBUTING.md
 
