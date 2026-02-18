@@ -5,15 +5,9 @@ on:
   pull_request:
     branches: [ main ]
   workflow_dispatch:
-  workflow_run:
-    workflows: ["Update Gemini CLI Version"]
-    types:
-      - completed
-    branches: [ main ]
 
 jobs:
   build:
-    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -35,27 +29,21 @@ jobs:
         authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
 
     - name: Build gemini-cli
-      run: |
-        nix build .#gemini-cli
+      run: nix build .#gemini-cli --out-link result-gemini-cli
 
     - name: Push gemini-cli to Cachix
       if: github.ref == 'refs/heads/main'
-      run: |
-        nix build .#gemini-cli --json | jq -r '.[].outputs.out' | cachix push clementpoiret
+      run: nix build .#gemini-cli --json | jq -r '.[].outputs.out' | cachix push clementpoiret
 
     - name: Test gemini-cli
-      run: |
-        ./result/bin/gemini --version
+      run: ./result-gemini-cli/bin/gemini --version
 
     - name: Build gemini-cli-preview
-      run: |
-        nix build .#gemini-cli-preview
+      run: nix build .#gemini-cli-preview --out-link result-gemini-cli-preview
 
     - name: Push gemini-cli-preview to Cachix
       if: github.ref == 'refs/heads/main'
-      run: |
-        nix build .#gemini-cli-preview --json | jq -r '.[].outputs.out' | cachix push clementpoiret
+      run: nix build .#gemini-cli-preview --json | jq -r '.[].outputs.out' | cachix push clementpoiret
 
     - name: Test gemini-cli-preview
-      run: |
-        ./result/bin/gemini-preview --version
+      run: ./result-gemini-cli-preview/bin/gemini-preview --version
