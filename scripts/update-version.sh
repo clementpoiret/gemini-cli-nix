@@ -33,14 +33,14 @@ OUTPUT=$(nix build .#$FLAKE_ATTR 2>&1 || true)
 NEW_SRC_HASH=$(echo "$OUTPUT" | grep "got:" | head -n1 | cut -d ':' -f 2 | xargs)
 
 if [[ -z "$NEW_SRC_HASH" || "$NEW_SRC_HASH" != sha256-* ]]; then
-    echo "❌ Failed to extract source hash. Build output:"
+    echo "Failed to extract source hash. Build output:"
     echo "$OUTPUT"
     exit 1
 fi
 
 echo "Found source hash: $NEW_SRC_HASH"
 # Update ONLY the source hash (key is "hash =")
-sed -i "s/hash = \"$FAKE_HASH\"/hash = \"$NEW_SRC_HASH\"/" "$PACKAGE_FILE"
+sed -i "s|hash = \"$FAKE_HASH\"|hash = \"$NEW_SRC_HASH\"|" "$PACKAGE_FILE"
 
 # 4. Fetch the new NPM Deps Hash
 echo "Fetching new npmDepsHash via Nix build..."
@@ -49,14 +49,14 @@ OUTPUT=$(nix build .#$FLAKE_ATTR 2>&1 || true)
 NEW_DEPS_HASH=$(echo "$OUTPUT" | grep "got:" | head -n1 | cut -d ':' -f 2 | xargs)
 
 if [[ -z "$NEW_DEPS_HASH" || "$NEW_DEPS_HASH" != sha256-* ]]; then
-    echo "❌ Failed to extract npm deps hash. Build output:"
+    echo "Failed to extract npm deps hash. Build output:"
     echo "$OUTPUT"
     exit 1
 fi
 
 echo "Found npm hash: $NEW_DEPS_HASH"
 # Update the deps hash (key is "npmDepsHash =")
-sed -i "s/npmDepsHash = \"$FAKE_HASH\"/npmDepsHash = \"$NEW_DEPS_HASH\"/" "$PACKAGE_FILE"
+sed -i "s|npmDepsHash = \"$FAKE_HASH\"|npmDepsHash = \"$NEW_DEPS_HASH\"|" "$PACKAGE_FILE"
 
 # 5. Final Verification
 echo "Verifying successful build..."
