@@ -52,9 +52,13 @@ buildNpmPackage (finalAttrs: {
     ${jq}/bin/jq 'del(.optionalDependencies."node-pty")' packages/core/package.json > packages/core/package.json.tmp && mv packages/core/package.json.tmp packages/core/package.json
 
     # Add a minimal build script that only builds the packages needed for the CLI,
-    # skipping workspaces (devtools, vscode-ide-companion, etc.) that have build
-    # requirements incompatible with the Nix sandbox.
-    ${jq}/bin/jq '.scripts["build:nix"] = "npm run build --workspace @google/gemini-cli-core && npm run build --workspace @google/gemini-cli"' package.json > package.json.tmp && mv package.json.tmp package.json
+    # skipping workspaces (vscode-ide-companion, etc.) not required at runtime.
+    # The devtools workspace must be built before cli because cli imports its types.
+    if [ -d packages/devtools ]; then
+      ${jq}/bin/jq '.scripts["build:nix"] = "npm run build --workspace @google/gemini-cli-devtools && npm run build --workspace @google/gemini-cli-core && npm run build --workspace @google/gemini-cli"' package.json > package.json.tmp && mv package.json.tmp package.json
+    else
+      ${jq}/bin/jq '.scripts["build:nix"] = "npm run build --workspace @google/gemini-cli-core && npm run build --workspace @google/gemini-cli"' package.json > package.json.tmp && mv package.json.tmp package.json
+    fi
   '';
 
   npmBuildScript = "build:nix";
