@@ -32,8 +32,10 @@ buildNpmPackage (finalAttrs: {
   ];
 
   preConfigure = ''
-    mkdir -p packages/generated
-    echo "export const GIT_COMMIT_INFO = { commitHash: '${finalAttrs.src.rev}' };" > packages/generated/git-commit.ts
+    mkdir -p packages/cli/src/generated packages/core/src/generated
+    echo "export const GIT_COMMIT_INFO = '${finalAttrs.src.rev}';" > packages/cli/src/generated/git-commit.ts
+    echo "export const CLI_VERSION = '${finalAttrs.version}';" >> packages/cli/src/generated/git-commit.ts
+    cp packages/cli/src/generated/git-commit.ts packages/core/src/generated/git-commit.ts
   '';
 
   postPatch = ''
@@ -48,7 +50,14 @@ buildNpmPackage (finalAttrs: {
 
     # Remove node-pty dependency from packages/core/package.json
     ${jq}/bin/jq 'del(.optionalDependencies."node-pty")' packages/core/package.json > packages/core/package.json.tmp && mv packages/core/package.json.tmp packages/core/package.json
+
+    # Add a minimal build script that only builds the packages needed for the CLI,
+    # skipping workspaces (devtools, vscode-ide-companion, etc.) that have build
+    # requirements incompatible with the Nix sandbox.
+    ${jq}/bin/jq '.scripts["build:nix"] = "npm run build --workspace @google/gemini-cli-core && npm run build --workspace @google/gemini-cli"' package.json > package.json.tmp && mv package.json.tmp package.json
   '';
+
+  npmBuildScript = "build:nix";
 
   installPhase = ''
     runHook preInstall
