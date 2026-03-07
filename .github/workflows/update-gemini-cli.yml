@@ -2,7 +2,7 @@ name: Update Gemini CLI Version
 
 on:
   schedule:
-    - cron: '0 * * * *'  # Run every hour
+    - cron: '0 */12 * * *'  # Run twice a day
   workflow_dispatch:
 
 permissions:

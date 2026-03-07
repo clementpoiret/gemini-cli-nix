@@ -2,7 +2,7 @@ name: Update Gemini CLI Preview Version
 
 on:
   schedule:
-    - cron: '30 * * * *'  # Run every hour, offset by 30 mins
+    - cron: '30 */12 * * *'  # Run twice a day, offset by 30 mins
   workflow_dispatch:
 
 permissions:
