@@ -30,11 +30,13 @@ jobs:
         run: |
           nix build .#gemini-cli --print-build-logs
           ./result/bin/gemini --version
+          ./result/bin/gemini --help
           test -f ./result/bin/gemini
 
       - name: Build and test gemini-cli-preview
         run: |
           nix build .#gemini-cli-preview --print-build-logs
           ./result/bin/gemini-preview --version
+          ./result/bin/gemini-preview --help
           test -f ./result/bin/gemini-preview
 

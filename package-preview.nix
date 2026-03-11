@@ -3,6 +3,8 @@
   stdenv,
   buildNpmPackage,
   fetchFromGitHub,
+  nodejs,
+  makeWrapper,
   jq,
   pkg-config,
   clang_20,
@@ -23,6 +25,7 @@ buildNpmPackage (finalAttrs: {
 
   nativeBuildInputs = [
     jq
+    makeWrapper
     pkg-config
   ]
   ++ lib.optionals stdenv.isDarwin [ clang_20 ]; # clang_21 breaks @vscode/vsce's optionalDependencies keytar
@@ -85,8 +88,9 @@ buildNpmPackage (finalAttrs: {
 
     rm -f $out/share/gemini-cli/node_modules/@google/gemini-cli-core/dist/docs/CONTRIBUTING.md
 
-    ln -s $out/share/gemini-cli/node_modules/@google/gemini-cli/dist/index.js $out/bin/gemini-preview
-    chmod +x "$out/bin/gemini-preview"
+    makeWrapper ${nodejs}/bin/node $out/bin/gemini-preview \
+      --add-flags "$out/share/gemini-cli/node_modules/@google/gemini-cli/dist/index.js" \
+      --set NODE_PATH "$out/share/gemini-cli/node_modules"
 
     runHook postInstall
   '';
