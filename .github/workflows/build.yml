@@ -36,7 +36,9 @@ jobs:
       run: nix build .#gemini-cli --json | jq -r '.[].outputs.out' | cachix push clementpoiret
 
     - name: Test gemini-cli
-      run: ./result-gemini-cli/bin/gemini --version
+      run: |
+        ./result-gemini-cli/bin/gemini --version
+        ./result-gemini-cli/bin/gemini --help
 
     - name: Build gemini-cli-preview
       run: nix build .#gemini-cli-preview --out-link result-gemini-cli-preview
@@ -46,4 +48,6 @@ jobs:
       run: nix build .#gemini-cli-preview --json | jq -r '.[].outputs.out' | cachix push clementpoiret
 
     - name: Test gemini-cli-preview
-      run: ./result-gemini-cli-preview/bin/gemini-preview --version
+      run: |
+        ./result-gemini-cli-preview/bin/gemini-preview --version
+        ./result-gemini-cli-preview/bin/gemini-preview --help
